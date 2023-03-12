@@ -213,10 +213,6 @@ void AMPShooterCharacter::TurnInPlace(float DeltaTime)
 	{
 		TurningInPlace = ETurningInPlace::ETIP_Left;
 	}
-	else
-	{
-		TurningInPlace = ETurningInPlace::ETIP_NotTurning;
-	}
 }
 
 void AMPShooterCharacter::SetOverlappingWeapon(AWeapon *Weapon)
