@@ -34,6 +34,7 @@ void UMPShooterAnimInstance::NativeUpdateAnimation(float DeltaTime)
 	EquippedWeapon = MPShooterCharacter->GetEquippedWeapon();
 	bIsCrouched = MPShooterCharacter->bIsCrouched;
 	bAiming = MPShooterCharacter->IsAiming();
+	TurningInPlace = MPShooterCharacter->GetTurningInPlace();
 
 	//Offset Yaw for Strafing
 	FRotator AimRotation = MPShooterCharacter->GetBaseAimRotation();
