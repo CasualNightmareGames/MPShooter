@@ -9,6 +9,8 @@
 #include "Net/UnrealNetwork.h"
 #include "MPShooter/Weapon/Weapon.h"
 #include "MPShooter/MPShooterComponents/CombatComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "Kismet/KismetMathLibrary.h"
 
 AMPShooterCharacter::AMPShooterCharacter()
 {
@@ -34,6 +36,8 @@ AMPShooterCharacter::AMPShooterCharacter()
 
 
 	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Camera, ECollisionResponse::ECR_Ignore);
+	GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Camera, ECollisionResponse::ECR_Ignore);
 }
 
 void AMPShooterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -51,6 +55,7 @@ void AMPShooterCharacter::BeginPlay()
 void AMPShooterCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	AimOffset(DeltaTime);
 }
 
 void AMPShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -163,6 +168,37 @@ void AMPShooterCharacter::AimButtonReleased()
 	}
 }
 
+void AMPShooterCharacter::AimOffset(float DeltaTime)
+{
+	if(Combat && Combat->EquippedWeapon == nullptr) return;
+	FVector Velocity = GetVelocity();
+	Velocity.Z = 0.f;
+	float Speed = Velocity.Size();
+	bool bIsInAir = GetCharacterMovement()->IsFalling();
+
+	if (Speed == 0.f && !bIsInAir) // Standing still, not jumping
+	{
+		FRotator CurrentAimRotation = FRotator(0.f, GetBaseAimRotation().Yaw, 0.f);
+		FRotator DeltaAimRotation = UKismetMathLibrary::NormalizedDeltaRotator(CurrentAimRotation,StartingAimRotation);
+		AO_Yaw = DeltaAimRotation.Yaw;
+		bUseControllerRotationYaw = false;
+	}
+	if (Speed > 0.f || bIsInAir) // Running or jumping
+	{
+		StartingAimRotation = FRotator(0.f, GetBaseAimRotation().Yaw, 0.f);
+		AO_Yaw = 0.f;
+		bUseControllerRotationYaw = true;
+	}
+	AO_Pitch = GetBaseAimRotation().Pitch;
+	if(AO_Pitch > 90.f && !IsLocallyControlled())
+	{
+		//remapping pitch from [270,360] to [-90,0]
+		FVector2D InRange(270.f,360.f);
+		FVector2D OutRange(-90.f,0.f);
+		AO_Pitch = FMath::GetMappedRangeValueClamped(InRange,OutRange,AO_Pitch);
+	}
+}
+
 void AMPShooterCharacter::SetOverlappingWeapon(AWeapon* Weapon)
 {
 	if (OverlappingWeapon)
@@ -201,8 +237,8 @@ bool AMPShooterCharacter::IsAiming()
 	return (Combat && Combat->bAiming);
 }
 
-
-
-
-
-
+AWeapon *AMPShooterCharacter::GetEquippedWeapon()
+{
+    if(Combat == nullptr) return nullptr;
+	return Combat->EquippedWeapon;
+}
